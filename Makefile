@@ -4,11 +4,10 @@ SRC=src/main.cc  src/system.cc  src/wpm.cc src/kernel.cu
 OBJ=main.o  system.o  wpm.o  kernel.o
 
 CC=nvcc
-COMP_OPT="-O2 -Wall -Wextra -std=c++11"
 CFLAGS=-O2 -std=c++11
 
-INC=-I./inc #-I/usr/local/cuda/include 
-LIB=-L./lib -lcufft #-L/usr/local/cuda/lib64
+INC=-I./inc 
+LIB=-L./lib -lcufft 
 LDFLAGS=$(INC) $(LIB)
 
 # all
@@ -22,7 +21,6 @@ kernel.o : src/kernel.cu
 	$(CC) $(LDFLAGS) $(CFLAGS) -c -o $@ $<
 
 ./bin/wpm: $(OBJ)
-	#$(CC) $(LDFLAGS) $(CFLAGS)  --compiler-options $(COMP_OPT) -o $@ $^
 	$(CC) $(LDFLAGS) $(CFLAGS)  -o $@ $^
 
 
@@ -46,7 +44,6 @@ SIZE=256
 profile:
 	#srun --gres=gpu nvprof --metrics $(METRICS) --events $(EVENTS) ./bin/wpm -k $(KERNEL) -x $(SIZE) 
 	srun --gres=gpu nvprof --events $(EVENTS) ./bin/wpm -k $(KERNEL) -x $(SIZE) 
-
 
 
 
