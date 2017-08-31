@@ -35,17 +35,27 @@ void shMemKernelWrapper(cufftDoubleComplex* E, cufftDoubleComplex* N,
 
 
 /* complex math functions */
-__host__ __device__ static __inline__ cuDoubleComplex cuCmul(cuDoubleComplex x, double y);
-__host__ __device__ static __inline__ cuDoubleComplex cuCdiv(cuDoubleComplex x, double y);
-__host__ __device__ static __inline__ cuDoubleComplex cuCexp(cuDoubleComplex x);
-__host__ __device__ static __inline__ cuDoubleComplex cuCsqrt(cuDoubleComplex x);
+__host__ __device__ static __inline__
+	cuDoubleComplex cuCmul(cuDoubleComplex x, double y);
+__host__ __device__ static __inline__
+	cuDoubleComplex cuCdiv(cuDoubleComplex x, double y);
+__host__ __device__ static __inline__
+	cuDoubleComplex cuCexp(cuDoubleComplex x);
+__host__ __device__ static __inline__
+	cuDoubleComplex cuCsqrt(cuDoubleComplex x);
 
 /* overload */
-__host__ __device__ static __inline__ cuDoubleComplex operator*(cuDoubleComplex x, double y);
-__host__ __device__ static __inline__ cuDoubleComplex operator/(cuDoubleComplex x, double y);
-__host__ __device__ static __inline__ cuDoubleComplex operator+(cuDoubleComplex x, cuDoubleComplex y);
-__host__ __device__ static __inline__ cuDoubleComplex operator-(cuDoubleComplex x, cuDoubleComplex y);
-__host__ __device__ static __inline__ cuDoubleComplex operator*(cuDoubleComplex x, cuDoubleComplex y);
-__host__ __device__ static __inline__ cuDoubleComplex operator/(cuDoubleComplex x, cuDoubleComplex y);
+__host__ __device__ static __inline__
+	cuDoubleComplex operator*(cuDoubleComplex x, double y);
+__host__ __device__ static __inline__
+	cuDoubleComplex operator/(cuDoubleComplex x, double y);
+__host__ __device__ static __inline__
+	cuDoubleComplex operator+(cuDoubleComplex x, cuDoubleComplex y);
+__host__ __device__ static __inline__
+	cuDoubleComplex operator-(cuDoubleComplex x, cuDoubleComplex y);
+__host__ __device__ static __inline__
+	cuDoubleComplex operator*(cuDoubleComplex x, cuDoubleComplex y);
+__host__ __device__ static __inline__
+	cuDoubleComplex operator/(cuDoubleComplex x, cuDoubleComplex y);
 
 

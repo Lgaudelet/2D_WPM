@@ -7,7 +7,6 @@
  * Naive Kernel
  */
 
-
 __global__ void naiveKernelTE(cufftDoubleComplex* E, cufftDoubleComplex* N,
 	cufftDoubleComplex* KX, cufftDoubleComplex* S, double* XZ, 
 	double k0, double dz, int nx, int i) {

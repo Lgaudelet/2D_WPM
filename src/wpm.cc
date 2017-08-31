@@ -29,8 +29,8 @@ void init_KX(cpx* KX, int nx, double dkx) {
 		KX[index++] = cpx(i*dkx,0);
 	}
 	for(int i=-nx/2; i<0; i++) {
-                KX[index++] = cpx(i*dkx,0);
-        }
+		KX[index++] = cpx(i*dkx,0);
+	}
 
 }
 
@@ -39,10 +39,10 @@ void init_FX(double* FX, int nx, double dfx) {
 	// for kissfft: 0 -n:-1 1:n-1	
 	FX[0] = 0;
 
-        int index=1;
-        for(int i=-nx/2; i<nx/2-1; i++) {
-                FX[index++] = i*dfx;
-        }
+	int index=1;
+	for(int i=-nx/2; i<nx/2-1; i++) {
+		FX[index++] = i*dfx;
+	}
 
 }
 
@@ -51,21 +51,22 @@ void meshgrid(double* XY, double* YX, double* X, int nx, double* Y, int ny) {
 	//YX = (double*)malloc( ny*nx*sizeof(double));
 
 	for(int i=0; i<ny; i++) {
-                for(int j=0; j<nx; j++) {
-                        XY[i*nx+j] = X[j];
-                }
-        }
+		for(int j=0; j<nx; j++) {
+			XY[i*nx+j] = X[j];
+		}
+	}
 
-        for(int i=0; i<ny; i++) {
-                for(int j=0; j<nx; j++) {
-                        YX[i*nx+j] = Y[i];
-                }
-        }
+	for(int i=0; i<ny; i++) {
+		for(int j=0; j<nx; j++) {
+			YX[i*nx+j] = Y[i];
+		}
+	}
 }
 
 
 /* System */
-void init_N(int system, cpx* N, int nz, int nx, double lambda, double dx, double dz, double ax) {
+void init_N(int system, cpx* N, int nz, int nx, double lambda, double dx,
+	double dz, double ax) {
 	switch(system) {
 		case 0:	// ==== homogeneous system ====
 			init_homog_system(N, nz, nx);				break;
@@ -89,15 +90,15 @@ void init_N(int system, cpx* N, int nz, int nx, double lambda, double dx, double
 /* Input parameters */
 
 void init_input(int input, double* theta_deg, double* f_sig, double lambda) {
-        switch(input) {
-                case 0: *theta_deg = *f_sig = 0; break;
-                case 1: *theta_deg = 5;  *f_sig = 1/lambda*std::sin((*theta_deg)*PI/180)/1e6;  break;
-                case 2: *f_sig = 0.1;    *theta_deg = std::asin( (*f_sig)*1e6*lambda )*180/PI; break;
-                case 3: *theta_deg = 30; *f_sig = 1/lambda*std::sin((*theta_deg)*PI/180)/1e6;  break;
-                case 4: *f_sig = 0.400;  *theta_deg = std::asin( (*f_sig)*1e6*lambda )*180/PI; break;
-                case 5: *theta_deg = 45; *f_sig = 1/lambda*std::sin((*theta_deg)*PI/180)/1e6;  break;
-                case 6: *f_sig = 0.55;   *theta_deg = std::asin( (*f_sig)*1e6*lambda )*180/PI; break;
-        }
+	switch(input) {
+		case 0: *theta_deg = *f_sig = 0; break;
+		case 1: *theta_deg = 5;  *f_sig = 1/lambda*std::sin((*theta_deg)*PI/180)/1e6;  break;
+		case 2: *f_sig = 0.1;    *theta_deg = std::asin( (*f_sig)*1e6*lambda )*180/PI; break;
+		case 3: *theta_deg = 30; *f_sig = 1/lambda*std::sin((*theta_deg)*PI/180)/1e6;  break;
+		case 4: *f_sig = 0.400;  *theta_deg = std::asin( (*f_sig)*1e6*lambda )*180/PI; break;
+		case 5: *theta_deg = 45; *f_sig = 1/lambda*std::sin((*theta_deg)*PI/180)/1e6;  break;
+		case 6: *f_sig = 0.55;   *theta_deg = std::asin( (*f_sig)*1e6*lambda )*180/PI; break;
+	}
 }
 
 /* Wave */
@@ -116,44 +117,48 @@ void init_E(int wave, cpx* E,
 	}
 }
 
-void init_plane(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda, double A, double theta_deg) {
+void init_plane(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda,
+	double A, double theta_deg) {
 
-        double theta_rad = theta_deg * PI/180;
-        double k0 = 2*PI/lambda;
-        double kx = k0*std::sin(theta_rad);
-        double kz = k0*std::cos(theta_rad);
-        cpx i(0,1);
+	double theta_rad = theta_deg * PI/180;
+	double k0 = 2*PI/lambda;
+	double kx = k0*std::sin(theta_rad);
+	double kz = k0*std::cos(theta_rad);
+	cpx i(0,1);
 
-        for(int j=0; j<nx; j++) {
-                E[j] = A * std::exp( i*(kx*XZ[j]+(kz*ZX[j])) );
-        }
+	for(int j=0; j<nx; j++) {
+		E[j] = A * std::exp( i*(kx*XZ[j]+(kz*ZX[j])) );
+	}
 
 	for(int j=nx; j<(nx*nz); j++) {
 		E[j] = cpx(0,0);
 	}
 }
 
-void init_gauss(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda, double A, double theta_deg) {
+void init_gauss(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda,
+	double A, double theta_deg) {
 
-        double theta_rad = theta_deg * PI/180;
-        double k0 = 2*PI/lambda;
-        double kx = k0*std::sin(theta_rad);
-        double kz = k0*std::cos(theta_rad);
-        double W0 = 3*lambda;
-        cpx i(0,1);
+	double theta_rad = theta_deg * PI/180;
+	double k0 = 2*PI/lambda;
+	double kx = k0*std::sin(theta_rad);
+	double kz = k0*std::cos(theta_rad);
+	double W0 = 3*lambda;
+	cpx i(0,1);
 
-        for(int j=0; j<nx; j++) {
-                E[j] = A * std::exp(-(XZ[j]*XZ[j])/(W0*W0)) * std::exp( i*(kx*XZ[j]+(kz*ZX[j])) );
-        }
+	for(int j=0; j<nx; j++) {
+		E[j] = A * std::exp(-(XZ[j]*XZ[j])/(W0*W0)) *
+			std::exp( i*(kx*XZ[j]+(kz*ZX[j])) );
+	}
 
 	for(int j=nx; j<(nx*nz); j++) {
-                E[j] = cpx(0,0);
-        }
+		E[j] = cpx(0,0);
+	}
 }
 
 
 /* Wave Propagation Mathod */
-void wpm( cpx* E, cpx* N, cpx* KX, double* XZ, double k0, double dz, int nz, int nx, int fresnel) {
+void wpm( cpx* E, cpx* N, cpx* KX, double* XZ, double k0, double dz, int nz,
+	int nx, int fresnel) {
 
 	kissfft<double> fft(nx,false);
 	cpx* S = static_cast<cpx*>(malloc(nx*sizeof(cpx)));
@@ -179,18 +184,22 @@ void wpm( cpx* E, cpx* N, cpx* KX, double* XZ, double k0, double dz, int nz, int
 				next_nk0 = N[(i+1)*nx+j].real()*k0;
 				next_KZ = next_nk0 * sqrt(one - pow(KX[kj]/next_nk0,2));
 
-				if( KZ.imag()<1e-6 && KZ.real()!=0 )  {	// exclude evanescent waves, i.e. only real KZ
+				// exclude evanescent waves, i.e. only real KZ
+				if( KZ.imag()<1e-6 && KZ.real()!=0 )  {	
 
 				// ==== Fresnel Coefficient ====
 					switch(fresnel) {
 						case 0: F = 2.0*KZ / (KZ+next_KZ); break;
-						case 1: F = 2.0*N[i*nx+j]*N[(i+1)*nx+j]*KZ / (pow(N[(i+1)*nx+j],2)*KZ+pow(N[i*nx+j],2)*next_KZ); break;
+						case 1: F = 2.0*N[i*nx+j]*N[(i+1)*nx+j]*KZ /
+							(pow(N[(i+1)*nx+j],2)*KZ+pow(N[i*nx+j],2)*next_KZ);
+							break;
 						default: F=one; break;
 					}
 					
 					double sign = (kj%2)? -1:1;
 
-					E[(i+1)*nx+j] += F * sign  * S[kj]/static_cast<double>(nx) * exp(-kk0*dz) * exp(li*(XZ[i*nx+j]*KX[kj] + KZ*dz));
+					E[(i+1)*nx+j] += F * sign  * S[kj]/static_cast<double>(nx) *
+						exp(-kk0*dz) * exp(li*(XZ[i*nx+j]*KX[kj] + KZ*dz));
 				}
 			}
 		}

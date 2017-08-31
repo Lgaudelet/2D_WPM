@@ -30,8 +30,9 @@
 #include <kernel.h>
 
 /*********************************
- *	Constants
+ *	constants
  *********************************/
+ 
 const static int DEFAULT_X_SIZE = 	128;
 const static int DEFAULT_Z_FACTOR = 	3;
 const static int DEFAULT_INPUT =	0;
@@ -43,10 +44,11 @@ const static int DEFAULT_BLOCK_SIZE = 	32;
 
 using namespace std;
 
+
+
 /*********************************
  *	utility functions prototypes
  *********************************/
-
 
 int nextpow2(double x);
 void convert(cpx* src, cufftDoubleComplex* dest, int n);
@@ -59,9 +61,12 @@ void store_results(string filename, int kernel, int blockSize, int nz, int nx,
 double compare(cufftDoubleComplex* gpu, cpx* cpu, int nz, int nx);
 void printHelp(char* argv);
 
+
+
 /**********************************
  *	main
  *********************************/
+ 
 int main(int argc, char* argv[]) {
 
 	bool showHelp = (chCommandLineGetBool("h", argc, argv))?
@@ -204,7 +209,7 @@ int main(int argc, char* argv[]) {
 	//	device memory
 	cufftDoubleComplex *d_E, *d_N, *d_KX; 
 	double* d_XZ;
-	//cudaError_t cudaError = cudaGetLastError();
+
 	cudaError_t err_E = cudaMalloc(&d_E,  nz*nx*sizeof(cufftDoubleComplex));
 	cudaError_t err_N = cudaMalloc(&d_N,  nz*nx*sizeof(cufftDoubleComplex));
 	cudaError_t err_KX = cudaMalloc(&d_KX, nx*sizeof(cufftDoubleComplex));
@@ -478,6 +483,8 @@ void printHelp(char* argv) {
 		<< "      this value will linearly modify the discrete size of z aperture in function of the x aperture" << endl
 		<< "  -k|--kernel" << endl
 		<< "      kernel to be used" << endl
+		<< "  -b|--block-size" << endl
+		<< "      size of thread blocks" << endl
 		<< "  -f|--fresnel-coef" << endl
 		<< "      fresnel coefficient to be used" << endl
 		<< " (default)0: TE" << endl

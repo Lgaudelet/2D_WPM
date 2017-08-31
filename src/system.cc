@@ -31,7 +31,8 @@ void init_boundary_system(complex<double>* N, int nz, int nx) {
 
 }
 
-void init_waveguide_system(complex<double>* N, int nz, int nx, double dx, double lambda) {
+void init_waveguide_system(complex<double>* N, int nz, int nx, double dx,
+	double lambda) {
 
 	complex<double> n_core(1.8,0);
 	complex<double> n_clad(1,0);
@@ -47,7 +48,8 @@ void init_waveguide_system(complex<double>* N, int nz, int nx, double dx, double
 
 }
 
-void init_lens_system(complex<double>* N, int nz, int nx, double dz, double dx, double ax, double lambda) {
+void init_lens_system(complex<double>* N, int nz, int nx, double dz, double dx,
+	double ax, double lambda) {
 
 	// lens diameter
 	double D = ax;
@@ -125,7 +127,8 @@ void init_lens_system(complex<double>* N, int nz, int nx, double dz, double dx, 
 
 }
 
-void init_GRIN_system(complex<double>* N, int nz, int nx, double dz, double dx, double ax, double lambda) {
+void init_GRIN_system(complex<double>* N, int nz, int nx, double dz, double dx,
+	double ax, double lambda) {
 
 	// lens diameter
 	double D = ax;
@@ -201,7 +204,8 @@ void init_GRIN_system(complex<double>* N, int nz, int nx, double dz, double dx, 
 
 }
 
-void init_slit_system(complex<double>* N, int nz, int nx, double dz, double dx, double lambda) {
+void init_slit_system(complex<double>* N, int nz, int nx, double dz, double dx,
+	double lambda) {
 
 	int j0 = nx/2;
 	int i0 = 2e-6/dz;
@@ -216,7 +220,8 @@ void init_slit_system(complex<double>* N, int nz, int nx, double dz, double dx, 
 
 	for(int i=0; i<nz; i++) {
 		for(int j=0; j<nx; j++) {
-			N[i*nx+j] = (T/2 >= abs((i - i0)*dz)) && (D/2 <= abs((j - j0)*dx))? n_medium:n_slit;
+			N[i*nx+j] = (T/2 >= abs((i-i0)*dz)) && (D/2 <= abs((j-j0)*dx))?
+				n_medium:n_slit;
 
 		}
 	}
