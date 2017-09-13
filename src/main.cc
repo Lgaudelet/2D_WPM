@@ -7,6 +7,12 @@
  *
  */
 
+/*******************************************************
+ * Changelog:
+ * 13.09.2017 mfertig correction of nx calculation
+ */
+
+
 
 // Miscellaneous input/output and standard stuff
 //#include <cstdlib>
@@ -32,9 +38,10 @@
 /*********************************
  *	constants
  *********************************/
- 
-const static int DEFAULT_X_SIZE = 	128;
-const static int DEFAULT_Z_FACTOR = 	3;
+const static int DEFAULT_LAMBDA = 1300; // nanometers
+const static int DEFAULT_SAMPLES_PER_LAMBDA = 16;
+const static int DEFAULT_LAMBDA_PER_APERTURE_X = 4;
+const static int DEFAULT_LAMBDA_PER_APERTURE_Z = 8;
 const static int DEFAULT_INPUT =	0;
 const static int DEFAULT_WAVE =		1;
 const static int DEFAULT_SYSTEM =	3;
@@ -57,7 +64,7 @@ template<typename T> void print_array(T* array, int nrow, int ncol);
 template<typename T> void store_array(T* array, int nrow, int ncol,	string filename);
 void store_array2(cufftDoubleComplex* array, int nrow, int ncol, string filename);
 void store_results(string filename, int kernel, int blockSize, int nz, int nx,
-	double kernelTime, double cpuTime=-1, double err=-1);
+	int lz, int lx, int ls,	double kernelTime, double cpuTime=-1, double err=-1);
 double compare(cufftDoubleComplex* gpu, cpx* cpu, int nz, int nx);
 void printHelp(char* argv);
 
@@ -81,70 +88,59 @@ int main(int argc, char* argv[]) {
 
 	if(!verbose)	cout << endl << "Init..." << endl;
 	
-	// wavelength and sampling
-	double lambda = 1.3e-6;
-	double f_samp = 16/lambda;
+	// wavelength and samples per wavelength
 
-	/* grid parameters */
-	int x_size = -1;
-	chCommandLineGet<int>(&x_size, "x", argc, argv);
-	chCommandLineGet<int>(&x_size, "x-size", argc, argv);
-	x_size = (x_size!=-1)? x_size:DEFAULT_X_SIZE;
+	int lambda_int = -1;
+	chCommandLineGet<int>(&lambda_int, "l", argc, argv);
+	chCommandLineGet<int>(&lambda_int, "lambda", argc, argv);
+	lambda_int = (lambda_int!=-1)? lambda_int:DEFAULT_LAMBDA;
+	double lambda = lambda_int*1E-12; // conversion to meters
 
-	double az, ax, scale, factor;
-	switch(x_size) {
-		case 128: {	// nx = 128
-			scale = 8;	ax = scale*lambda;	break;
-		}
-		case 256: {	// nx = 256
-			scale = 16;	ax = scale*lambda;	break;
-		}
-		case 512: {	// nx = 512
-			scale = 32;	ax = scale*lambda;	break;
-		}
-		case 1024: {	// nx = 512
-			scale = 64;	ax = scale*lambda;	break;
-		}
-		default: {
-			cout << "Error - invalid x size" << endl;
-			exit(-1);
-		}
-	}
+	int samples_per_lambda = -1;
+	chCommandLineGet<int>(&samples_per_lambda, "ls", argc, argv);
+	chCommandLineGet<int>(&samples_per_lambda, "samples-per-lambda", argc, argv);
+	samples_per_lambda = (samples_per_lambda!=-1)? samples_per_lambda:DEFAULT_SAMPLES_PER_LAMBDA;
 
-	int z_factor = -1;
-	chCommandLineGet<int>(&z_factor, "z", argc, argv);
-	chCommandLineGet<int>(&z_factor, "z-size", argc, argv);
-	z_factor = (z_factor!=-1)? z_factor:DEFAULT_Z_FACTOR;
-	az = z_factor*scale*lambda;
+	// grid parameters x
 
-	/* space Z (split step) */
-	if(!verbose)	cout << "\tSpace Z...\t\t" << flush;
-	double dz = lambda/8;
-	int nz = static_cast<int>(az/dz);
+	int lambda_per_aperture_x = -1;
+	chCommandLineGet<int>(&lambda_per_aperture_x, "lx", argc, argv);
+	chCommandLineGet<int>(&lambda_per_aperture_x, "lambda-per-aperture_x", argc, argv);
+	lambda_per_aperture_x = (lambda_per_aperture_x!=-1)? lambda_per_aperture_x:DEFAULT_LAMBDA_PER_APERTURE_X;
+	double f_samp = samples_per_lambda/lambda;
 
-	double* Z = static_cast<double*>(malloc(nz*sizeof(double)));
-	check(Z, "Z");	init_Z(Z, nz, dz);
-	if(!verbose)	cout << "done - nz=" << nz << endl;
-	
-	/* space X */
 	if(!verbose)	cout << "\tSpace X...\t\t" << flush;
+	int nx = nextpow2( lambda_per_aperture_x * samples_per_lambda ); // samples_per_aperture_x;
 	double dx = 1/f_samp;
-	int nx = nextpow2( ax/dx );
-
+	double ax = nx*dx;
 	double* X = static_cast<double*>(malloc(nx*sizeof(double)));
 	check(X, "X");	init_X(X, nx, dx);
 	if(!verbose)	cout << "done - nx=" << nx << endl;
 
-	/* spatial frequency KX */
+	// grid parameters z
+
+	int lambda_per_aperture_z = -1;
+	chCommandLineGet<int>(&lambda_per_aperture_z, "lz", argc, argv);
+	chCommandLineGet<int>(&lambda_per_aperture_z, "lambda-per-aperture_z", argc, argv);
+	lambda_per_aperture_z = (lambda_per_aperture_z!=-1)? lambda_per_aperture_z:DEFAULT_LAMBDA_PER_APERTURE_Z;
+	
+	if(!verbose)	cout << "\tSpace Z...\t\t" << flush;
+	int nz = nextpow2( lambda_per_aperture_z * samples_per_lambda ); // samples_per_aperture_z;
+	double dz = dx; // aspect ratio
+	double az = nz*dz;
+	double* Z = static_cast<double*>(malloc(nz*sizeof(double)));
+	check(Z, "Z");	init_Z(Z, nz, dz);
+	if(!verbose)	cout << "done - nz=" << nz << endl;
+	
+	// spatial frequency KX
+
 	if(!verbose)	cout << "\tSpatial frequency...\t" << flush;
 	double dfx = 1/ax;
-	double fx_max = dfx*(nx/2-1);
-	double dtheta = asin(dfx*lambda)*180/PI;
+	double fx_max = dfx*(nx/2-1); // index 0 .. n-1 and nx is power of two !
 	double dkx = 2*PI*dfx;
 	if(!verbose)	cout << "done" << endl;
 
 	cpx* KX = static_cast<cpx*>(malloc(nx*sizeof(cpx)));
-	//double* FX = static_cast<double*>(malloc(nx*sizeof(double)));
 	init_KX(KX, nx, dkx);	//init_FX(FX, nx, dfx);
 
 	/* twodimensional grid */
@@ -349,13 +345,16 @@ int main(int argc, char* argv[]) {
 			chCommandLineGet<string>(&filename, "r", argc, argv);
 			chCommandLineGet<string>(&filename, "store-results", argc, argv);
 			store_results(filename, kernel, blockSize, nz, nx, 
+				lambda_per_aperture_z, lambda_per_aperture_x, samples_per_lambda,
 				1e3*kernelTimer.getTime(), 1e3*cpuTimer.getTime(), err); 
 		}
 	}
 	else if(store) {
 		chCommandLineGet<string>(&filename, "r", argc, argv);
 		chCommandLineGet<string>(&filename, "store-results", argc, argv);
-		store_results(filename, kernel, blockSize, nz, nx, 1e3*kernelTimer.getTime()); 
+		store_results(filename, kernel, blockSize, nz, nx, 
+			lambda_per_aperture_z, lambda_per_aperture_x, samples_per_lambda,
+			1e3*kernelTimer.getTime()); 
 	}
 
 	/* free */
@@ -437,7 +436,7 @@ void store_array2(cufftDoubleComplex* array, int nrow, int ncol, string filename
 }
 
 void store_results(string filename, int kernel, int blockSize, int nz, int nx,
-	double kernelTime, double cpuTime, double err) {
+	 int lz, int lx, int ls, double kernelTime, double cpuTime, double err) {
 
 	ofstream file;
 
@@ -445,12 +444,13 @@ void store_results(string filename, int kernel, int blockSize, int nz, int nx,
 	// if the file does not exist write column names
 	if( stat(filename.c_str(), &buffer) ) {
 		file.open(filename.c_str());
-		file << "kernel_id;block_size;nz;nx;kernel_time;cpu_time;err" << endl;
+		file << "kernel_id;block_size;nz;nx;lz;lx;ls;kernel_time;cpu_time;err" << endl;
 	}
 	else{	file.open(filename.c_str(), ios::app);	}
 	
-	file << kernel << ";" << blockSize << ";" << nz << ";" << nx << 
-		";" << kernelTime << ";" << cpuTime << ";" << err << endl;
+	file << kernel << ";" << blockSize << ";" << nz << ";" << nx << ";" 
+		<< lz << ";" << lx << ";" << ls << ";"
+		<< kernelTime << ";" << cpuTime << ";" << err << endl;
 	file.close();
 
 }
