@@ -5,6 +5,8 @@
 #include <iostream>
 
 using namespace std;
+typedef enum {HOMOGENEOUS, BOUNDARY, WAVEGUIDE, LENS, GRIN_LENS, SLIT} syst_t;
+
 
 void init_homog_system(complex<double>* N, int nz, int nx);
 

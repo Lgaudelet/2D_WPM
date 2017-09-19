@@ -151,7 +151,7 @@ int main(int argc, char* argv[]) {
 	system = (system!=-1)? system:DEFAULT_SYSTEM;
 	
 	cpx* N = static_cast<cpx*>(malloc(nz*nx*sizeof(cpx)));
-	check(N, "N");	init_N(system, N, nz, nx, lambda, dx, dz, ax);
+	check(N, "N");	init_N(static_cast<syst_t>(system), N, nz, nx, lambda, dx, dz, ax);
 	if(!verbose)	cout << "done" << endl;
 
 	/* test input parameters */
@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
 	double A = 1;
 	double k0 = 2*PI/lambda;
 	cpx* E = static_cast<cpx*>(malloc(nz*nx*sizeof(cpx)));
-	check(E, "E");	init_E(wave, E, X, Z, nz, nx, lambda, A, theta_deg);
+	check(E, "E");	init_E(static_cast<wave_t>(wave), E, X, Z, nz, nx, lambda, A, theta_deg);
 	if(!verbose)	cout << "done" << endl << endl;
 	
 

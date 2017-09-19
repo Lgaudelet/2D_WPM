@@ -65,20 +65,20 @@ void meshgrid(double* XY, double* YX, double* X, int nx, double* Y, int ny) {
 
 
 /* System */
-void init_N(int system, cpx* N, int nz, int nx, double lambda, double dx,
+void init_N(syst_t system, cpx* N, int nz, int nx, double lambda, double dx,
 	double dz, double ax) {
 	switch(system) {
-		case 0:	// ==== homogeneous system ====
+		case HOMOGENEOUS:	// ==== homogeneous system ====
 			init_homog_system(N, nz, nx);				break;
-		case 1:	// ==== single boundary ====
+		case BOUNDARY:	// ==== single boundary ====
 			init_boundary_system( N, nz, nx);			break;
-		case 2:	// ==== Waveguide ===
+		case WAVEGUIDE:	// ==== Waveguide ===
 			init_waveguide_system(N, nz, nx, dx, lambda);		break;
-		case 3:	// ==== Lens ====
+		case LENS:	// ==== Lens ====
 			init_lens_system(N, nz, nx, dz, dx, ax, lambda);	break;
-		case 4:	// ==== Equivalent GRIN lens ====
+		case GRIN_LENS:	// ==== Equivalent GRIN lens ====
 			init_GRIN_system(N, nz, nx, dz, dx, ax, lambda);	break;
-		case 5:	// ==== slit ====
+		case SLIT:	// ==== slit ====
 			init_slit_system(N, nz, nx, dz, dx, lambda);		break;
 		default:
 			std::cout << "ERROR - unknown system" << std::endl;
@@ -103,13 +103,13 @@ void init_input(int input, double* theta_deg, double* f_sig, double lambda) {
 
 /* Wave */
 
-void init_E(int wave, cpx* E, 
+void init_E(wave_t wave, cpx* E, 
 	double* X, double* Z, int nz, int nx, double lambda, double A, double theta_deg) {
 
 	switch(wave) {
-		case 0:
+		case PLANE:
 			init_plane(E, X, Z, nz, nx, lambda, A, theta_deg); break;
-		case 1:
+		case GAUSS:
 			init_gauss(E, X, Z, nz, nx, lambda, A, theta_deg); break;
 		default:
 			std::cout << "ERROR - unknown wave type" << std::endl;
