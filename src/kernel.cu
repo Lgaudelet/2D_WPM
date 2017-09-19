@@ -8,7 +8,7 @@
  */
 
 __global__ void naiveKernelTE(cufftDoubleComplex* E, cufftDoubleComplex* N,
-	cufftDoubleComplex* KX, cufftDoubleComplex* S, double* XZ, 
+	cufftDoubleComplex* KX, cufftDoubleComplex* S, double* X, 
 	double k0, double dz, int nx, int i) {
 	
 	int j = blockIdx.x * blockDim.x + threadIdx.x;
@@ -16,7 +16,6 @@ __global__ void naiveKernelTE(cufftDoubleComplex* E, cufftDoubleComplex* N,
 	if(j<nx) {
 
 		// load constants and variables
-		cufftDoubleComplex one = make_cuDoubleComplex(1,0);
 		cufftDoubleComplex li = make_cuDoubleComplex(0,1);
 		cufftDoubleComplex result = make_cuDoubleComplex(0,0);
 		
@@ -34,8 +33,8 @@ __global__ void naiveKernelTE(cufftDoubleComplex* E, cufftDoubleComplex* N,
 		for(int kj=0; kj<nx; kj++) {
 
 			// compute KZ and next_KZ
-			tmp = KX[kj]/nk0;	KZ = cuCsqrt(one-(tmp*tmp)) * nk0;
-			tmp = KX[kj]/next_nk0;	next_KZ = cuCsqrt(one-(tmp*tmp)) * next_nk0;
+			tmp = KX[kj];	KZ = cuCsqrt(nk0*nk0-tmp*tmp);
+			tmp = KX[kj];	next_KZ = cuCsqrt(next_nk0*next_nk0-tmp*tmp);
 
 			if( KZ.y < 1e-6 && KZ.x!=0 ) {	// exclude evanescent waves
 
@@ -46,7 +45,7 @@ __global__ void naiveKernelTE(cufftDoubleComplex* E, cufftDoubleComplex* N,
 				int sign = (kj%2)? -1:1;
 				result = result + 
 						( F * (S[kj]/nx) * (sign*std::exp(-kk0*dz)) * 
-						cuCexp(li*(KX[kj]*XZ[i*nx+j]+KZ*dz)) );
+						cuCexp(li*(KX[kj]*X[j]+KZ*dz)) );
 			}
 		}
 		E[(i+1)*nx+j] = result;
@@ -54,7 +53,7 @@ __global__ void naiveKernelTE(cufftDoubleComplex* E, cufftDoubleComplex* N,
 }
 
 __global__ void naiveKernelTM(cufftDoubleComplex* E, cufftDoubleComplex* N,
-	cufftDoubleComplex* KX, cufftDoubleComplex* S, double* XZ, 
+	cufftDoubleComplex* KX, cufftDoubleComplex* S, double* X, 
 	double k0, double dz, int nx, int i) {
 	
 	int j = blockIdx.x * blockDim.x + threadIdx.x;
@@ -62,7 +61,6 @@ __global__ void naiveKernelTM(cufftDoubleComplex* E, cufftDoubleComplex* N,
 	if(j<nx) {
 
 		// load constants and variables
-		cufftDoubleComplex one = make_cuDoubleComplex(1,0);
 		cufftDoubleComplex li = make_cuDoubleComplex(0,1);
 		cufftDoubleComplex result = make_cuDoubleComplex(0,0);
 		
@@ -80,8 +78,8 @@ __global__ void naiveKernelTM(cufftDoubleComplex* E, cufftDoubleComplex* N,
 		for(int kj=0; kj<nx; kj++) {
 
 			// compute KZ and next_KZ
-			tmp = KX[kj]/nk0;	KZ = cuCsqrt(one-(tmp*tmp)) * nk0;
-			tmp = KX[kj]/next_nk0;	next_KZ = cuCsqrt(one-(tmp*tmp)) * next_nk0;
+			tmp = KX[kj];	KZ = cuCsqrt(nk0*nk0-tmp*tmp);
+			tmp = KX[kj];	next_KZ = cuCsqrt(next_nk0*next_nk0-tmp*tmp);
 
 			if( KZ.y < 1e-6 && KZ.x!=0 ) {	// exclude evanescent waves
 
@@ -92,7 +90,7 @@ __global__ void naiveKernelTM(cufftDoubleComplex* E, cufftDoubleComplex* N,
 				int sign = (kj%2)? -1:1;
 				result = result + 
 						( F * (S[kj]/nx) * (sign*std::exp(-kk0*dz)) * 
-						cuCexp(li*(KX[kj]*XZ[i*nx+j]+KZ*dz)) );
+						cuCexp(li*(KX[kj]*X[j]+KZ*dz)) );
 			}
 		}
 		E[(i+1)*nx+j] = result;
@@ -100,7 +98,7 @@ __global__ void naiveKernelTM(cufftDoubleComplex* E, cufftDoubleComplex* N,
 }
 
 void naiveKernelWrapper(cufftDoubleComplex* E, cufftDoubleComplex* N, 
-	cufftDoubleComplex* KX, double* XZ, double k0, double dz, int nz, int nx,
+	cufftDoubleComplex* KX, double* X, double k0, double dz, int nz, int nx,
 	int blockSize, int fresnel) {
 	
 	cufftHandle plan;
@@ -120,7 +118,7 @@ void naiveKernelWrapper(cufftDoubleComplex* E, cufftDoubleComplex* N,
 			// fftt
 			cufftExecZ2Z(plan, E+i*nx, S, CUFFT_FORWARD);
 			// compute E
-			naiveKernelTE<<<grid_dim, block_dim>>>(E, N, KX, S, XZ, k0, dz, nx, i);
+			naiveKernelTE<<<grid_dim, block_dim>>>(E, N, KX, S, X, k0, dz, nx, i);
 		}
 		break;
 	
@@ -129,7 +127,7 @@ void naiveKernelWrapper(cufftDoubleComplex* E, cufftDoubleComplex* N,
 			// fftt
 			cufftExecZ2Z(plan, E+i*nx, S, CUFFT_FORWARD);
 			// compute E
-			naiveKernelTM<<<grid_dim, block_dim>>>(E, N, KX, S, XZ, k0, dz, nx, i);
+			naiveKernelTM<<<grid_dim, block_dim>>>(E, N, KX, S, X, k0, dz, nx, i);
 		}
 		break;
 		
@@ -146,7 +144,7 @@ void naiveKernelWrapper(cufftDoubleComplex* E, cufftDoubleComplex* N,
  */
 
 __global__ void shMemKernelTE(cufftDoubleComplex* E, cufftDoubleComplex* N,
-	cufftDoubleComplex* KX, cufftDoubleComplex* S, double* XZ, 
+	cufftDoubleComplex* KX, cufftDoubleComplex* S, double* X, 
 	double k0, double dz, int nx, int i) {
 	
 	// initialite constants and variables
@@ -157,14 +155,13 @@ __global__ void shMemKernelTE(cufftDoubleComplex* E, cufftDoubleComplex* N,
 	int nb = nx/blockDim.x;
 	int j = blockIdx.x * blockDim.x + threadIdx.x;
 
-	cufftDoubleComplex one, li, n, next_n;
+	cufftDoubleComplex li, n, next_n;
 	cufftDoubleComplex tmp, result;
 	cufftDoubleComplex KZ, next_KZ, F;
 	double nk0, kk0, next_nk0;
 
 	// preliminary computing
 	if(j<nx) {
-		one = make_cuDoubleComplex(1,0);
 		li = make_cuDoubleComplex(0,1);
 		result = make_cuDoubleComplex(0,0);
 		
@@ -188,8 +185,8 @@ __global__ void shMemKernelTE(cufftDoubleComplex* E, cufftDoubleComplex* N,
 			for(int ll=0; ll<blockDim.x; ll++) {
 
 				// compute KZ and next_KZ
-				tmp = kx[ll]/nk0;	KZ = cuCsqrt(one-(tmp*tmp)) * nk0;
-				tmp = kx[ll]/next_nk0;	next_KZ = cuCsqrt(one-(tmp*tmp)) * next_nk0;
+				tmp = kx[ll];	KZ = cuCsqrt(nk0*nk0-tmp*tmp);
+				tmp = kx[ll];	next_KZ = cuCsqrt(next_nk0*next_nk0-tmp*tmp);
 
 				if( KZ.y < 1e-6 && KZ.x!=0 ) {	// exclude evanescent waves
 
@@ -200,7 +197,7 @@ __global__ void shMemKernelTE(cufftDoubleComplex* E, cufftDoubleComplex* N,
 					int sign = ( (l*blockDim.x+ll)%2 )? -1:1;
 					result = result + 
 						( F * (s[ll]/nx) * (sign*std::exp(-kk0*dz)) * 
-						cuCexp(li*(kx[ll]*XZ[i*nx+j]+KZ*dz)) );
+						cuCexp(li*(kx[ll]*X[j]+KZ*dz)) );
 				}	
 			}
 		}
@@ -210,7 +207,7 @@ __global__ void shMemKernelTE(cufftDoubleComplex* E, cufftDoubleComplex* N,
 }
 
 __global__ void shMemKernelTM(cufftDoubleComplex* E, cufftDoubleComplex* N,
-	cufftDoubleComplex* KX, cufftDoubleComplex* S, double* XZ, 
+	cufftDoubleComplex* KX, cufftDoubleComplex* S, double* X, 
 	double k0, double dz, int nx, int i) {
 	
 	// initialite constants and variables
@@ -221,14 +218,13 @@ __global__ void shMemKernelTM(cufftDoubleComplex* E, cufftDoubleComplex* N,
 	int nb = nx/blockDim.x;
 	int j = blockIdx.x * blockDim.x + threadIdx.x;
 
-	cufftDoubleComplex one, li;
+	cufftDoubleComplex li;
 	cufftDoubleComplex tmp, result, n, next_n;
 	cufftDoubleComplex KZ, next_KZ, F;
 	double nk0, kk0, next_nk0;
 
 	// preliminary computing
 	if(j<nx) {
-		one = make_cuDoubleComplex(1,0);
 		li = make_cuDoubleComplex(0,1);
 		result = make_cuDoubleComplex(0,0);
 		
@@ -252,8 +248,8 @@ __global__ void shMemKernelTM(cufftDoubleComplex* E, cufftDoubleComplex* N,
 			for(int ll=0; ll<blockDim.x; ll++) {
 
 				// compute KZ and next_KZ
-				tmp = kx[ll]/nk0;	KZ = cuCsqrt(one-(tmp*tmp)) * nk0;
-				tmp = kx[ll]/next_nk0;	next_KZ = cuCsqrt(one-(tmp*tmp)) * next_nk0;
+				tmp = kx[ll];	KZ = cuCsqrt(nk0*nk0-tmp*tmp);
+				tmp = kx[ll];	next_KZ = cuCsqrt(next_nk0*next_nk0-tmp*tmp);
 
 				if( KZ.y < 1e-6 && KZ.x!=0 ) {	// exclude evanescent waves
 
@@ -264,7 +260,7 @@ __global__ void shMemKernelTM(cufftDoubleComplex* E, cufftDoubleComplex* N,
 					int sign = ( (l*blockDim.x+ll)%2 )? -1:1;
 					result = result + 
 						( F * (s[ll]/nx) * (sign*std::exp(-kk0*dz)) * 
-						cuCexp(li*(kx[ll]*XZ[i*nx+j]+KZ*dz)) );
+						cuCexp(li*(kx[ll]*X[j]+KZ*dz)) );
 				}	
 			}
 		}
@@ -274,7 +270,7 @@ __global__ void shMemKernelTM(cufftDoubleComplex* E, cufftDoubleComplex* N,
 }
 
 void shMemKernelWrapper(cufftDoubleComplex* E, cufftDoubleComplex* N, 
-	cufftDoubleComplex* KX, double* XZ, double k0, double dz, int nz, int nx,
+	cufftDoubleComplex* KX, double* X, double k0, double dz, int nz, int nx,
 	int blockSize, int fresnel) {
 	
 	cufftHandle plan;
@@ -297,7 +293,7 @@ void shMemKernelWrapper(cufftDoubleComplex* E, cufftDoubleComplex* N,
 			cufftExecZ2Z(plan, E+i*nx, S, CUFFT_FORWARD);
 			// compute E
 			shMemKernelTE<<<grid_dim, block_dim, sharedMemorySize>>>(
-				E, N, KX, S, XZ, k0, dz, nx, i);
+				E, N, KX, S, X, k0, dz, nx, i);
 		}
 		break;
 	
@@ -307,7 +303,7 @@ void shMemKernelWrapper(cufftDoubleComplex* E, cufftDoubleComplex* N,
 			cufftExecZ2Z(plan, E+i*nx, S, CUFFT_FORWARD);
 			// compute E
 			shMemKernelTM<<<grid_dim, block_dim, sharedMemorySize>>>(
-				E, N, KX, S, XZ, k0, dz, nx, i);
+				E, N, KX, S, X, k0, dz, nx, i);
 		}
 		break;
 		
@@ -319,6 +315,10 @@ void shMemKernelWrapper(cufftDoubleComplex* E, cufftDoubleComplex* N,
 
 
 /* complex math functions */
+__host__ __device__ static __inline__ cuDoubleComplex cuCsub(double  x, cuDoubleComplex y) {
+	return make_cuDoubleComplex(x - cuCreal(y), -cuCimag(y));
+}
+
 __host__ __device__ static __inline__ cuDoubleComplex cuCmul(cuDoubleComplex x, double y) {
 	return make_cuDoubleComplex(cuCreal(x) * y, cuCimag(x) * y);
 }
@@ -349,6 +349,10 @@ __host__ __device__ static __inline__ cuDoubleComplex cuCsqrt(cuDoubleComplex x)
 
 /* overload */
 
+__host__ __device__ static __inline__ cuDoubleComplex operator-(double x, cuDoubleComplex y) {
+	return cuCsub(x,y);
+}
+
 __host__ __device__ static __inline__ cuDoubleComplex operator*(cuDoubleComplex x, double y) {
 	return cuCmul(x,y);
 }
@@ -359,10 +363,6 @@ __host__ __device__ static __inline__ cuDoubleComplex operator/(cuDoubleComplex 
 
 __host__ __device__ static __inline__ cuDoubleComplex operator+(cuDoubleComplex x, cuDoubleComplex y) {
 	return cuCadd(x,y);
-}
-
-__host__ __device__ static __inline__ cuDoubleComplex operator-(cuDoubleComplex x, cuDoubleComplex y) {
-	return cuCsub(x,y);
 }
 
 __host__ __device__ static __inline__ cuDoubleComplex operator*(cuDoubleComplex x, cuDoubleComplex y) {

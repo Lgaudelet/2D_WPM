@@ -29,14 +29,14 @@ void init_N(int system, cpx* N, int nz, int nx, double lambda, double dx,
 void init_input(int input, double* theta_deg, double* f_sig, double lambda);
 
 /* Wave */
-void init_E(int wave, cpx* E, double* XZ, double* ZX, int nz, int nx,
+void init_E(int wave, cpx* E, double* X, double* Z, int nz, int nx,
 	double lambda, double A, double theta_deg);
-void init_plane(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda,
+void init_plane(cpx* E, double* X, double* Z,  int nz, int nx, double lambda,
 	double A, double theta_deg);
-void init_gauss(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda,
+void init_gauss(cpx* E, double* X, double* Z,  int nz, int nx, double lambda,
 	double A, double theta_deg);
 
 /* Wave Propagation Method */
-void wpm( cpx* E, cpx* N, cpx* KX, double* XZ, double k0, double dz,
+void wpm( cpx* E, cpx* N, cpx* KX, double* X, double k0, double dz,
 	int nz, int nx, int fresnel);
 

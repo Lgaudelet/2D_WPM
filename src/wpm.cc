@@ -104,20 +104,20 @@ void init_input(int input, double* theta_deg, double* f_sig, double lambda) {
 /* Wave */
 
 void init_E(int wave, cpx* E, 
-	double* XZ, double* ZX, int nz, int nx, double lambda, double A, double theta_deg) {
+	double* X, double* Z, int nz, int nx, double lambda, double A, double theta_deg) {
 
 	switch(wave) {
 		case 0:
-			init_plane(E, XZ, ZX, nz, nx, lambda, A, theta_deg); break;
+			init_plane(E, X, Z, nz, nx, lambda, A, theta_deg); break;
 		case 1:
-			init_gauss(E, XZ, ZX, nz, nx, lambda, A, theta_deg); break;
+			init_gauss(E, X, Z, nz, nx, lambda, A, theta_deg); break;
 		default:
 			std::cout << "ERROR - unknown wave type" << std::endl;
 			exit(-1);
 	}
 }
 
-void init_plane(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda,
+void init_plane(cpx* E, double* X, double* Z,  int nz, int nx, double lambda,
 	double A, double theta_deg) {
 
 	double theta_rad = theta_deg * PI/180;
@@ -127,7 +127,7 @@ void init_plane(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda,
 	cpx i(0,1);
 
 	for(int j=0; j<nx; j++) {
-		E[j] = A * std::exp( i*(kx*XZ[j]+(kz*ZX[j])) );
+		E[j] = A * std::exp( i*(kx*X[j]+(kz*Z[j])) );
 	}
 
 	for(int j=nx; j<(nx*nz); j++) {
@@ -135,7 +135,7 @@ void init_plane(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda,
 	}
 }
 
-void init_gauss(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda,
+void init_gauss(cpx* E, double* X, double* Z,  int nz, int nx, double lambda,
 	double A, double theta_deg) {
 
 	double theta_rad = theta_deg * PI/180;
@@ -146,8 +146,8 @@ void init_gauss(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda,
 	cpx i(0,1);
 
 	for(int j=0; j<nx; j++) {
-		E[j] = A * std::exp(-(XZ[j]*XZ[j])/(W0*W0)) *
-			std::exp( i*(kx*XZ[j]+(kz*ZX[j])) );
+		E[j] = A * std::exp(-(X[j]*X[j])/(W0*W0)) *
+			std::exp( i*(kx*X[j]+(kz*Z[j])) );
 	}
 
 	for(int j=nx; j<(nx*nz); j++) {
@@ -157,7 +157,7 @@ void init_gauss(cpx* E, double* XZ, double* ZX,  int nz, int nx, double lambda,
 
 
 /* Wave Propagation Mathod */
-void wpm( cpx* E, cpx* N, cpx* KX, double* XZ, double k0, double dz, int nz,
+void wpm( cpx* E, cpx* N, cpx* KX, double* X, double k0, double dz, int nz,
 	int nx, int fresnel) {
 
 	kissfft<double> fft(nx,false);
@@ -179,10 +179,10 @@ void wpm( cpx* E, cpx* N, cpx* KX, double* XZ, double k0, double dz, int nz,
 				// ==== Propagation vector ====
 				nk0 = N[i*nx+j].real()*k0;
 				kk0 = N[i*nx+j].imag()*k0;
-				KZ = nk0 * sqrt(one - pow(KX[kj]/nk0,2));
+				KZ = sqrt(nk0*nk0 - KX[kj]*KX[kj]);
 
 				next_nk0 = N[(i+1)*nx+j].real()*k0;
-				next_KZ = next_nk0 * sqrt(one - pow(KX[kj]/next_nk0,2));
+				next_KZ = sqrt(next_nk0*next_nk0 - KX[kj]*KX[kj]);
 
 				// exclude evanescent waves, i.e. only real KZ
 				if( KZ.imag()<1e-6 && KZ.real()!=0 )  {	
@@ -199,7 +199,7 @@ void wpm( cpx* E, cpx* N, cpx* KX, double* XZ, double k0, double dz, int nz,
 					double sign = (kj%2)? -1:1;
 
 					E[(i+1)*nx+j] += F * sign  * S[kj]/static_cast<double>(nx) *
-						exp(-kk0*dz) * exp(li*(XZ[i*nx+j]*KX[kj] + KZ*dz));
+						exp(-kk0*dz) * exp(li*(X[j]*KX[kj] + KZ*dz));
 				}
 			}
 		}

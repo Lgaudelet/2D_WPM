@@ -143,13 +143,6 @@ int main(int argc, char* argv[]) {
 	cpx* KX = static_cast<cpx*>(malloc(nx*sizeof(cpx)));
 	init_KX(KX, nx, dkx);	//init_FX(FX, nx, dfx);
 
-	/* twodimensional grid */
-	if(!verbose)	cout << "\tGrid...\t\t\t" << flush;
-	double* XZ = static_cast<double*>(malloc(nz*nx*sizeof(double)));
-	double* ZX = static_cast<double*>(malloc(nz*nx*sizeof(double)));
-	check(XZ, "XZ"); check(ZX, "ZX");	meshgrid(XZ, ZX, X, nx, Z, nz);
-	if(!verbose)	cout << "done" << endl;
-
 	/* system */
 	if(!verbose)	cout << "\tSystem...\t\t" << flush;
 	int system = -1;
@@ -182,7 +175,7 @@ int main(int argc, char* argv[]) {
 	double A = 1;
 	double k0 = 2*PI/lambda;
 	cpx* E = static_cast<cpx*>(malloc(nz*nx*sizeof(cpx)));
-	check(E, "E");	init_E(wave, E, XZ, ZX, nz, nx, lambda, A, theta_deg);
+	check(E, "E");	init_E(wave, E, X, Z, nz, nx, lambda, A, theta_deg);
 	if(!verbose)	cout << "done" << endl << endl;
 	
 
@@ -200,18 +193,18 @@ int main(int argc, char* argv[]) {
 	cufftDoubleComplex* h_N = static_cast<cufftDoubleComplex*>(
 		malloc(nz*nx*sizeof(cufftDoubleComplex)));
 	cufftDoubleComplex* h_KX = static_cast<cufftDoubleComplex*>(
-		malloc(nz*nx*sizeof(cufftDoubleComplex)));
+		malloc(nx*sizeof(cufftDoubleComplex)));
 	
 	//	device memory
 	cufftDoubleComplex *d_E, *d_N, *d_KX; 
-	double* d_XZ;
+	double* d_X;
 
 	cudaError_t err_E = cudaMalloc(&d_E,  nz*nx*sizeof(cufftDoubleComplex));
 	cudaError_t err_N = cudaMalloc(&d_N,  nz*nx*sizeof(cufftDoubleComplex));
 	cudaError_t err_KX = cudaMalloc(&d_KX, nx*sizeof(cufftDoubleComplex));
-	cudaError_t err_XZ = cudaMalloc(&d_XZ, nz*nx*sizeof(double));
+	cudaError_t err_X = cudaMalloc(&d_X, nx*sizeof(double));
 	
-	if( d_E==NULL || d_N==NULL || d_KX==NULL || d_XZ==NULL ) {
+	if( d_E==NULL || d_N==NULL || d_KX==NULL || d_X==NULL ) {
 		cout << "Error - GPU memory alloc" << endl;
 		if(err_E != cudaSuccess) {
 			cout << "\t\tError " << err_E << " on E alloc : " 
@@ -225,13 +218,13 @@ int main(int argc, char* argv[]) {
 			cout << "\t\tError " << err_KX << " on KX alloc : "
 				<< cudaGetErrorString(err_KX)  << endl;
 		}
-		if(err_XZ != cudaSuccess) {
-			cout << "\t\tError " << err_XZ << " on XZ alloc : "
-				<< cudaGetErrorString(err_XZ)  << endl;
+		if(err_X != cudaSuccess) {
+			cout << "\t\tError " << err_X << " on X alloc : "
+				<< cudaGetErrorString(err_X)  << endl;
 		}
 		exit(-1);
 	}
-	else if( d_E==NULL || d_N==NULL || d_KX==NULL || d_XZ==NULL ) {
+	else if( d_E==NULL || d_N==NULL || d_KX==NULL || d_X==NULL ) {
 		cout << "Error - cpu memory alloc" << endl;
 		exit(-1);
 	}
@@ -252,8 +245,8 @@ int main(int argc, char* argv[]) {
 		nz*nx*sizeof(cufftDoubleComplex)), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_KX, h_KX, static_cast<size_t>(
 		nx*sizeof(cufftDoubleComplex)), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_XZ, XZ, static_cast<size_t>(
-		nz*nx*sizeof(double)), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_X, X, static_cast<size_t>(
+		nx*sizeof(double)), cudaMemcpyHostToDevice);
 
 	H2DTimer.stop();
 	if(!verbose) {
@@ -284,14 +277,14 @@ int main(int argc, char* argv[]) {
 	switch(kernel) {
 		case 0: {
 			kernelTimer.start();
-			naiveKernelWrapper(d_E, d_N, d_KX, d_XZ, 
+			naiveKernelWrapper(d_E, d_N, d_KX, d_X, 
 				k0, dz, nz, nx, blockSize, fresnel);
 			kernelTimer.stop();
 			break;
 		}
 		case 1: {
 			kernelTimer.start();
-			shMemKernelWrapper(d_E, d_N, d_KX, d_XZ, 
+			shMemKernelWrapper(d_E, d_N, d_KX, d_X, 
 				k0, dz, nz, nx, blockSize, fresnel);
 			kernelTimer.stop();
 			break;
@@ -333,7 +326,7 @@ int main(int argc, char* argv[]) {
 	if(compare_cpu) {
 		if(!verbose)	cout << "Applying cpu WPM ...\t\t" << flush;
 		cpuTimer.start();
-		wpm(E, N, KX, XZ, k0, dz, nz, nx, fresnel);
+		wpm(E, N, KX, X, k0, dz, nz, nx, fresnel);
 		cpuTimer.stop();
 		if(!verbose)	cout << "done - "  << 1e3 * cpuTimer.getTime() << "ms" << endl;
 		store_array(E, nz, nx, "E_cpu.csv");
@@ -360,14 +353,13 @@ int main(int argc, char* argv[]) {
 	/* free */
 	free(Z);	free(X);
 	free(KX);	//free(FX);
-	free(XZ);	free(ZX);
 	free(N);	free(E);
 
 	free(h_E);	free(h_N);
 	free(h_KX);
 
 	cudaFree(d_E);	cudaFree(d_N);
-	cudaFree(d_KX);	cudaFree(d_XZ);
+	cudaFree(d_KX);	cudaFree(d_X);
 
 	return 0;
 }
@@ -477,10 +469,12 @@ void printHelp(char* argv) {
 		<< "  Usage: " << endl
 		<< "  " << argv << " [options][-p <problem-size> ]" << endl << endl
 
-		<< "  -x|--x-size" << endl
-		<< "      discrete size of the aperture along x axis, must be a power of 2 and less than 1024" << endl
-		<< "  -z|--z-factor" << endl
-		<< "      this value will linearly modify the discrete size of z aperture in function of the x aperture" << endl
+		<< "  -l|--lambda" << endl
+		<< "      wavelength" << endl
+		<< "  -lx|--lambda-per-aperture-x" << endl
+		<< "      number of wavelength per aperture along x axis" << endl
+		<< "  -ls|--sample-per-lambda" << endl
+		<< "      number of samples by wave length" << endl
 		<< "  -k|--kernel" << endl
 		<< "      kernel to be used" << endl
 		<< "  -b|--block-size" << endl
