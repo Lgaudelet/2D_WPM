@@ -156,6 +156,14 @@ void init_gauss(cpx* E, double* X, double* Z,  int nz, int nx, double lambda,
 }
 
 
+cpx fresnelTE( const cpx& N, const cpx& next_N, const cpx& KZ, const cpx& next_KZ) {
+	return 2.0*KZ / (KZ+next_KZ);
+}
+
+cpx fresnelTM( const cpx& N, const cpx& next_N, const cpx& KZ, const cpx& next_KZ) {
+	return 2.0*N*next_N*KZ / (next_N*next_N*KZ + N*N*next_KZ);
+}
+
 /* Wave Propagation Mathod */
 void wpm( cpx* E, cpx* N, cpx* KX, double* X, double k0, double dz, int nz,
 	int nx, int fresnel) {
@@ -166,7 +174,15 @@ void wpm( cpx* E, cpx* N, cpx* KX, double* X, double k0, double dz, int nz,
 	double nk0, kk0, next_nk0;
 
 	cpx li(0,1);	cpx one(1,0);
-	
+
+	fresnel_t fresnel_p;
+	switch(fresnel) {
+		case 0:	fresnel_p = &fresnelTE;	break;
+		case 1:	fresnel_p = &fresnelTM;	break;
+		default: 
+			std::cout << "Error - Unknown Fresnel Coefficient " << fresnel << std::endl;
+			exit(-1);
+	}
 
 	for(int i=0; i<nz-1; i++) {
 
@@ -187,17 +203,8 @@ void wpm( cpx* E, cpx* N, cpx* KX, double* X, double k0, double dz, int nz,
 				// exclude evanescent waves, i.e. only real KZ
 				if( KZ.imag()<1e-6 && KZ.real()!=0 )  {	
 
-				// ==== Fresnel Coefficient ====
-					switch(fresnel) {
-						case 0: F = 2.0*KZ / (KZ+next_KZ); break;
-						case 1: F = 2.0*N[i*nx+j]*N[(i+1)*nx+j]*KZ /
-							(pow(N[(i+1)*nx+j],2)*KZ+pow(N[i*nx+j],2)*next_KZ);
-							break;
-						default: F=one; break;
-					}
-					
+					F = (*fresnel_p)(N[i*nx+j],N[(i+1)*nx+j],KZ,next_KZ);
 					double sign = (kj%2)? -1:1;
-
 					E[(i+1)*nx+j] += F * sign  * S[kj]/static_cast<double>(nx) *
 						exp(-kk0*dz) * exp(li*(X[j]*KX[kj] + KZ*dz));
 				}
